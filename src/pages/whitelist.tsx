@@ -37,6 +37,17 @@ const RING_POSITIONS = [{ angle: -90 }, { angle: 0 }, { angle: 90 }, { angle: 18
 
 const EVM_REGEX = /^0x[a-fA-F0-9]{40}$/;
 
+// Generate or retrieve a stable client ID (replaces auth session)
+function getClientId(): string {
+  const key = "wl_client_id";
+  let id = localStorage.getItem(key);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(key, id);
+  }
+  return id;
+}
+
 type Submission = {
   id?: string;
   session_id: string;
@@ -83,9 +94,7 @@ function ElementalRing4({ completedTasks }: { completedTasks: string[] }) {
                   style={{ boxShadow: `0 0 12px 4px ${task.color}40`, border: `2px solid ${task.color}`, borderRadius: "50%" }} />
               )}
               <div className="w-full h-full rounded-full flex items-center justify-center border-2 border-white shadow-md transition-all duration-500"
-                style={{
-                  background: isDone ? task.bg : "white",
-                }}>
+                style={{ background: isDone ? task.bg : "white" }}>
                 {isDone
                   ? <img src={task.img} alt={task.element} className="w-6 h-6 object-contain" />
                   : <div className="text-[9px] font-black text-slate-300">{task.element.slice(0, 2)}</div>
@@ -105,7 +114,7 @@ function ElementalRing4({ completedTasks }: { completedTasks: string[] }) {
 }
 
 export default function Whitelist() {
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const clientId = useRef<string>(getClientId());
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [proofInputs, setProofInputs] = useState<Record<string, string>>({});
   const [pendingTask, setPendingTask] = useState<string | null>(null);
@@ -116,28 +125,14 @@ export default function Whitelist() {
   const { toast } = useToast();
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      let session = data.session;
-      if (!session) {
-        const { data: anonData } = await supabase.auth.signInAnonymously();
-        session = anonData.session;
-      }
-      if (session) {
-        setSessionId(session.user.id);
-      }
-    });
+    fetchSubmission();
   }, []);
 
-  useEffect(() => {
-    if (sessionId) fetchSubmission();
-  }, [sessionId]);
-
   const fetchSubmission = async () => {
-    if (!sessionId) return;
     const { data } = await supabase
       .from("wl_submissions_quest")
       .select("*")
-      .eq("session_id", sessionId)
+      .eq("session_id", clientId.current)
       .single();
     if (data) {
       setSubmission(data);
@@ -146,14 +141,15 @@ export default function Whitelist() {
   };
 
   const ensureSubmission = async () => {
-    if (!sessionId) return;
     const { data } = await supabase
       .from("wl_submissions_quest")
       .select("id")
-      .eq("session_id", sessionId)
+      .eq("session_id", clientId.current)
       .single();
     if (!data) {
-      await supabase.from("wl_submissions_quest").insert({ session_id: sessionId, status: "pending" });
+      await supabase
+        .from("wl_submissions_quest")
+        .insert({ session_id: clientId.current, status: "pending" });
     }
   };
 
@@ -164,19 +160,19 @@ export default function Whitelist() {
 
   const completedTasks = TASKS.filter((t) => done(t.id)).map((t) => t.id);
   const completedCount = completedTasks.length;
-  const isWL = completedCount >= 3;
   const walletSubmitted = !!submission?.wallet;
 
   const handleTask = async (task: typeof TASKS[0]) => {
-    if (!sessionId || done(task.id)) return;
+    if (done(task.id)) return;
     await ensureSubmission();
     window.open(task.url, "_blank");
     if (!task.needsProof) {
       setPendingTask(task.id);
       setTimeout(async () => {
-        await supabase.from("wl_submissions_quest")
+        await supabase
+          .from("wl_submissions_quest")
           .update({ [`${task.id}_done`]: true, updated_at: new Date().toISOString() })
-          .eq("session_id", sessionId);
+          .eq("session_id", clientId.current);
         await fetchSubmission();
         setPendingTask(null);
         toast({ title: `${task.element} awakened`, description: `${task.label} complete.` });
@@ -185,12 +181,17 @@ export default function Whitelist() {
   };
 
   const submitProof = async (taskId: string) => {
-    if (!sessionId || !proofInputs[taskId]?.trim()) return;
+    if (!proofInputs[taskId]?.trim()) return;
     await ensureSubmission();
     setPendingTask(taskId);
-    await supabase.from("wl_submissions_quest")
-      .update({ [`${taskId}_done`]: true, [`${taskId}_url`]: proofInputs[taskId].trim(), updated_at: new Date().toISOString() })
-      .eq("session_id", sessionId);
+    await supabase
+      .from("wl_submissions_quest")
+      .update({
+        [`${taskId}_done`]: true,
+        [`${taskId}_url`]: proofInputs[taskId].trim(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("session_id", clientId.current);
     await fetchSubmission();
     setPendingTask(null);
     const task = TASKS.find((t) => t.id === taskId)!;
@@ -202,7 +203,7 @@ export default function Whitelist() {
   };
 
   const handleWalletSubmit = async () => {
-    if (!sessionId || !wallet.trim()) return;
+    if (!wallet.trim()) return;
     if (!EVM_REGEX.test(wallet.trim())) {
       setWalletError("Invalid EVM address. Must start with 0x and be 42 characters.");
       return;
@@ -210,9 +211,10 @@ export default function Whitelist() {
     setWalletError("");
     setSubmittingWallet(true);
     await ensureSubmission();
-    await supabase.from("wl_submissions_quest")
+    await supabase
+      .from("wl_submissions_quest")
       .update({ wallet: wallet.trim(), updated_at: new Date().toISOString() })
-      .eq("session_id", sessionId);
+      .eq("session_id", clientId.current);
     await fetchSubmission();
     setSubmittingWallet(false);
     toast({ title: "Wallet registered!", description: "Your application is under review." });
@@ -231,13 +233,11 @@ export default function Whitelist() {
       )}
 
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-sky-50 relative overflow-hidden">
-        {/* Floating blobs */}
         <div className="absolute top-20 left-10 w-64 h-64 bg-orange-300 rounded-full blur-3xl opacity-30" />
         <div className="absolute bottom-40 right-10 w-72 h-72 bg-pink-300 rounded-full blur-3xl opacity-30" />
         <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-sky-300 rounded-full blur-3xl opacity-20 -translate-x-1/2 -translate-y-1/2" />
 
         <div className="max-w-5xl mx-auto px-6 py-16 relative z-10">
-          {/* Header */}
           <div className="text-center mb-12">
             <p className="text-[10px] tracking-[0.3em] text-orange-500 mb-4 font-black uppercase">Whitelist Portal</p>
             <h1 className="text-4xl md:text-6xl font-black text-slate-800 tracking-tight mb-5">CLAIM YOUR SPOT</h1>
@@ -272,9 +272,7 @@ export default function Whitelist() {
                         <div className="flex items-center gap-5 px-5 py-5">
                           <div
                             className="w-12 h-12 rounded-full flex items-center justify-center border-2 border-white shadow-md flex-shrink-0 transition-all duration-300"
-                            style={{
-                              background: isDone ? task.color + "15" : "#f8fafc",
-                            }}
+                            style={{ background: isDone ? task.color + "15" : "#f8fafc" }}
                           >
                             {isDone
                               ? <img src={task.img} alt={task.element} className="w-6 h-6 object-contain" />
@@ -317,7 +315,7 @@ export default function Whitelist() {
                               />
                               <button
                                 onClick={() => submitProof(task.id)}
-                                disabled={!proofInputs[task.id]?.trim() || isPending}
+                                disabled={!proofInputs[task.id]?.trim() || !!isPending}
                                 className="px-5 py-3 text-[10px] font-black tracking-widest rounded-xl cursor-pointer transition-all disabled:opacity-40 shadow-md hover:shadow-lg"
                                 style={{ color: "white", background: task.color }}
                               >
@@ -332,58 +330,38 @@ export default function Whitelist() {
                 </div>
               </div>
 
-              {/* Wallet Card */}
-              {isWL && (
-                <div className="bg-white rounded-3xl border-2 border-green-100 shadow-xl p-6">
-                  <div className="text-[10px] tracking-[0.3em] text-green-500 mb-1 font-black uppercase">Register Wallet</div>
-                  <div className="text-[11px] text-slate-400 mb-5 leading-relaxed">Submit your EVM address to lock your whitelist spot.</div>
-                  {!walletSubmitted ? (
-                    <>
-                      <input
-                        type="text"
-                        placeholder="0x..."
-                        value={wallet}
-                        onChange={(e) => { setWallet(e.target.value); setWalletError(""); }}
-                        className={`w-full bg-slate-50 border-2 text-slate-800 px-4 py-3 text-xs font-mono rounded-xl mb-1 block focus:outline-none transition-colors ${walletError ? "border-red-300" : "border-slate-100 focus:border-green-300"}`}
-                      />
-                      {walletError && (
-                        <div className="text-[10px] text-red-500 mb-3">{walletError}</div>
-                      )}
-                      <button
-                        onClick={handleWalletSubmit}
-                        disabled={!wallet.trim() || submittingWallet}
-                        className="w-full py-3 mt-2 text-xs font-black tracking-widest rounded-xl text-white cursor-pointer transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-40 bg-green-500"
-                      >
-                        {submittingWallet ? "SUBMITTING..." : "SUBMIT WALLET"}
-                      </button>
-                    </>
-                  ) : (
-                    <div className="text-center py-4">
-                      <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-green-100 flex items-center justify-center text-green-500 font-black text-lg">!</div>
-                      <div className="text-xs font-black tracking-widest text-green-500 mb-2">WALLET REGISTERED</div>
-                      <div className="text-[10px] text-slate-400 font-mono break-all">{submission?.wallet}</div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* GTD Upgrade - RESTORED */}
-              {walletSubmitted && (
-                <div className="bg-white rounded-3xl border-2 border-orange-100 shadow-xl overflow-hidden">
-                  <a href="https://earnity.fun" target="_blank" rel="noreferrer" className="no-underline block">
-                    <div className="relative h-56 overflow-hidden cursor-pointer group">
-                      <img src="/IMG_8789.jpeg" alt="Upgrade to GTD" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                      <div className="absolute bottom-0 left-0 right-0 p-6">
-                        <div className="text-[9px] tracking-[0.3em] text-orange-300 mb-1 font-black uppercase">Ready For More?</div>
-                        <div className="text-lg font-black tracking-tight text-white mb-1">UPGRADE TO GTD</div>
-                        <div className="text-[11px] text-slate-300 leading-relaxed">GTD holders get a guaranteed mint slot. Collect all 6 Elementals on earnity.fun.</div>
-                        <div className="mt-3 text-[10px] font-black tracking-widest text-orange-300 uppercase">Enter Earnity.fun</div>
-                      </div>
-                    </div>
-                  </a>
-                </div>
-              )}
+              {/* Wallet Card - always visible */}
+              <div className="bg-white rounded-3xl border-2 border-green-100 shadow-xl p-6">
+                <div className="text-[10px] tracking-[0.3em] text-green-500 mb-1 font-black uppercase">Register Wallet</div>
+                <div className="text-[11px] text-slate-400 mb-5 leading-relaxed">Submit your EVM address to lock your whitelist spot.</div>
+                {!walletSubmitted ? (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="0x..."
+                      value={wallet}
+                      onChange={(e) => { setWallet(e.target.value); setWalletError(""); }}
+                      className={`w-full bg-slate-50 border-2 text-slate-800 px-4 py-3 text-xs font-mono rounded-xl mb-1 block focus:outline-none transition-colors ${walletError ? "border-red-300" : "border-slate-100 focus:border-green-300"}`}
+                    />
+                    {walletError && (
+                      <div className="text-[10px] text-red-500 mb-3">{walletError}</div>
+                    )}
+                    <button
+                      onClick={handleWalletSubmit}
+                      disabled={!wallet.trim() || submittingWallet}
+                      className="w-full py-3 mt-2 text-xs font-black tracking-widest rounded-xl text-white cursor-pointer transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-40 bg-green-500"
+                    >
+                      {submittingWallet ? "SUBMITTING..." : "SUBMIT WALLET"}
+                    </button>
+                  </>
+                ) : (
+                  <div className="text-center py-4">
+                    <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-green-100 flex items-center justify-center text-green-500 font-black text-lg">✓</div>
+                    <div className="text-xs font-black tracking-widest text-green-500 mb-2">WALLET REGISTERED</div>
+                    <div className="text-[10px] text-slate-400 font-mono break-all">{submission?.wallet}</div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Right Column - Ring */}
@@ -399,15 +377,6 @@ export default function Whitelist() {
                   {completedCount === 4 ? "ALL ELEMENTS AWAKENED" : `${4 - completedCount} ELEMENTS REMAINING`}
                 </div>
               </div>
-
-              {/* Mini GTD teaser when wallet not yet submitted */}
-              {!walletSubmitted && (
-                <div className="bg-white rounded-3xl border-2 border-slate-100 shadow-lg p-5 text-center">
-                  <div className="text-[10px] tracking-[0.3em] text-slate-400 mb-2 font-black uppercase">Want Guaranteed Mint?</div>
-                  <p className="text-xs text-slate-500 mb-3 leading-relaxed">Complete tasks and submit your wallet to unlock the GTD upgrade path.</p>
-                  <div className="w-8 h-8 mx-auto rounded-full bg-orange-100 flex items-center justify-center text-orange-500 font-black text-sm">?</div>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -415,3 +384,4 @@ export default function Whitelist() {
     </MainLayout>
   );
 }
+    
