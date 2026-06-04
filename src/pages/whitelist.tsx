@@ -106,8 +106,8 @@ function ElementalRing4({ completedTasks }: { completedTasks: string[] }) {
 
 export default function Whitelist() {
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [submission, setSubmission] = useState<<Submission | null>(null);
-  const [proofInputs, setProofInputs] = useState<<Record<string, string>>({});
+  const [submission, setSubmission] = useState<Submission | null>(null);
+  const [proofInputs, setProofInputs] = useState<Record<string, string>>({});
   const [pendingTask, setPendingTask] = useState<string | null>(null);
   const [wallet, setWallet] = useState("");
   const [walletError, setWalletError] = useState("");
