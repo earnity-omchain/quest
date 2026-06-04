@@ -197,10 +197,10 @@ function ElementalRing4({ completedTasks }: { completedTasks: string[] }) {
 
 export default function Whitelist() {
   const clientId = useRef<string>(getClientId());
-  const [submission, setSubmission] = useState<Submission | null>(null);
-  const [inputs, setInputs] = useState<Record<string, string>>({});
+  const [submission, setSubmission] = useState<<Submission | null>(null);
+  const [inputs, setInputs] = useState<<Record<string, string>>({});
   const [pendingTask, setPendingTask] = useState<string | null>(null);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -220,16 +220,24 @@ export default function Whitelist() {
 
   /* --- persist draft inputs ---------------------------------------- */
   useEffect(() => {
-    localStorage.setItem(`wl_draft_${clientId.current}`, JSON.stringify(inputs));
+    localStorage.setItem(
+      `wl_draft_${clientId.current}`,
+      JSON.stringify(inputs)
+    );
   }, [inputs]);
 
   /* --- fetch existing submission ----------------------------------- */
   const fetchSubmission = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("wl_submissions_quest")
       .select("*")
       .eq("session_id", clientId.current)
-      .single();
+      .maybeSingle();
+
+    if (error) {
+      console.error("fetchSubmission error:", error);
+      return;
+    }
 
     if (data) {
       setSubmission(data);
@@ -245,17 +253,29 @@ export default function Whitelist() {
 
   /* --- ensure row exists ------------------------------------------- */
   const ensureSubmission = async () => {
-    const { data } = await supabase
+    const { data, error: selectErr } = await supabase
       .from("wl_submissions_quest")
       .select("id")
       .eq("session_id", clientId.current)
-      .single();
+      .maybeSingle();
+
+    if (selectErr) {
+      console.error("ensureSubmission select error:", selectErr);
+    }
 
     if (!data) {
-      await supabase.from("wl_submissions_quest").insert({
-        session_id: clientId.current,
-        status: "in_progress",
-      });
+      const { error: insertErr } = await supabase
+        .from("wl_submissions_quest")
+        .insert({ session_id: clientId.current, status: "in_progress" });
+
+      if (insertErr) {
+        console.error("ensureSubmission insert error:", insertErr);
+        toast({
+          title: "Database error",
+          description: insertErr.message,
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -272,13 +292,15 @@ export default function Whitelist() {
   /* --- GO-button tasks --------------------------------------------- */
   const handleGoTask = async (task: (typeof TASKS)[0]) => {
     if (done(task.id)) return;
-    await ensureSubmission();
 
+    // Always open the link immediately
     window.open(task.url!, "_blank");
     setPendingTask(task.id);
 
-    setTimeout(async () => {
-      await supabase
+    // Fire-and-forget DB update (don't block UI if it fails)
+    try {
+      await ensureSubmission();
+      const { error } = await supabase
         .from("wl_submissions_quest")
         .update({
           [`${task.id}_done`]: true,
@@ -286,13 +308,17 @@ export default function Whitelist() {
         })
         .eq("session_id", clientId.current);
 
+      if (error) console.error("handleGoTask update error:", error);
       await fetchSubmission();
+    } catch (e) {
+      console.error("handleGoTask catch:", e);
+    } finally {
       setPendingTask(null);
       toast({
         title: `${task.element} awakened`,
         description: `${task.label} complete.`,
       });
-    }, 1200);
+    }
   };
 
   /* --- input change ------------------------------------------------ */
@@ -309,10 +335,9 @@ export default function Whitelist() {
   const handleSubmit = async () => {
     const errs: Record<string, string> = {};
 
+    /* Luxio-style validation: GO tasks must be clicked, inputs must be filled */
     if (!done("follow")) errs.follow = "Required — complete this task";
     if (!done("like")) errs.like = "Required — complete this task";
-    if (!done("quote")) errs.quote = "Click GO and paste your quote tweet link";
-    if (!done("comment")) errs.comment = "Click GO and paste your comment link";
 
     if (!inputs.quote?.trim()) errs.quote = "Paste your quote tweet link";
     if (!inputs.comment?.trim()) errs.comment = "Paste your comment link";
@@ -333,28 +358,40 @@ export default function Whitelist() {
     try {
       await ensureSubmission();
 
+      const payload = {
+        quote_done: true,
+        quote_url: inputs.quote.trim(),
+        comment_done: true,
+        comment_url: inputs.comment.trim(),
+        wallet: wallet,
+        status: "submitted",
+        updated_at: new Date().toISOString(),
+      };
+
       const { error } = await supabase
         .from("wl_submissions_quest")
-        .update({
-          quote_done: true,
-          quote_url: inputs.quote.trim(),
-          comment_done: true,
-          comment_url: inputs.comment.trim(),
-          wallet: wallet,
-          status: "submitted",
-          updated_at: new Date().toISOString(),
-        })
+        .update(payload)
         .eq("session_id", clientId.current);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase submit error:", error);
+        setErrors({ submit: `Supabase: ${error.message}` });
+        toast({
+          title: "Submission failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
 
       await fetchSubmission();
       toast({
         title: "Application Received",
         description: "We'll review your submission and whitelist approved Outworlders.",
       });
-    } catch {
-      setErrors({ submit: "Submission failed. Please try again." });
+    } catch (e: any) {
+      console.error("handleSubmit catch:", e);
+      setErrors({ submit: e?.message || "Submission failed. Please try again." });
     } finally {
       setSubmitting(false);
     }
@@ -527,8 +564,8 @@ export default function Whitelist() {
                             )}
                           </div>
 
-                          {/* Input field (quote / comment / wallet) */}
-                          {task.inputPlaceholder && !task.isWallet && (
+                          {/* Input field (quote / comment) */}
+                          {task.inputPlaceholder && (
                             <div className="mt-4">
                               <input
                                 type="text"
