@@ -149,7 +149,7 @@ export default function Whitelist() {
     if (!data) {
       await supabase
         .from("wl_submissions_quest")
-        .insert({ session_id: clientId.current, status: "pending" });
+        .insert({ session_id: clientId.current, status: "submitted" });
     }
   };
 
@@ -168,15 +168,13 @@ export default function Whitelist() {
     window.open(task.url, "_blank");
     if (!task.needsProof) {
       setPendingTask(task.id);
-      setTimeout(async () => {
-        await supabase
-          .from("wl_submissions_quest")
-          .update({ [`${task.id}_done`]: true, updated_at: new Date().toISOString() })
-          .eq("session_id", clientId.current);
-        await fetchSubmission();
-        setPendingTask(null);
-        toast({ title: `${task.element} awakened`, description: `${task.label} complete.` });
-      }, 1500);
+      await supabase
+        .from("wl_submissions_quest")
+        .update({ [`${task.id}_done`]: true, updated_at: new Date().toISOString() })
+        .eq("session_id", clientId.current);
+      await fetchSubmission();
+      setPendingTask(null);
+      toast({ title: `${task.element} awakened`, description: `${task.label} complete.` });
     }
   };
 
@@ -356,9 +354,16 @@ export default function Whitelist() {
                   </>
                 ) : (
                   <div className="text-center py-4">
-                    <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-green-100 flex items-center justify-center text-green-500 font-black text-lg">✓</div>
-                    <div className="text-xs font-black tracking-widest text-green-500 mb-2">WALLET REGISTERED</div>
-                    <div className="text-[10px] text-slate-400 font-mono break-all">{submission?.wallet}</div>
+                    <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-green-100 flex items-center justify-center text-green-500 text-xl">
+                      <Check className="w-6 h-6" />
+                    </div>
+                    <div className="text-base font-black tracking-widest text-green-500 mb-1">WL SPOT SECURED!</div>
+                    <div className="text-[11px] text-green-400 font-mono break-all mb-3">
+                      {submission?.wallet?.slice(0, 6)}...{submission?.wallet?.slice(-4)}
+                    </div>
+                    <div className="w-full py-3 rounded-xl bg-green-500 text-white text-xs font-black tracking-widest flex items-center justify-center gap-2">
+                      <Check className="w-4 h-4" /> Submitted
+                    </div>
                   </div>
                 )}
               </div>
