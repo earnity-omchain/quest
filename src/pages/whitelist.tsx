@@ -384,63 +384,21 @@ export default function Whitelist() {
       await fetchSubmission();
       toast({
         title: "Application Received",
-        description: "We'll review your submission and whitelist approved Outworlders.",
+        description:
+          "We'll review your submission and whitelist approved Outworlders.",
       });
     } catch (e: any) {
       console.error("handleSubmit catch:", e);
-      setErrors({ submit: e?.message || "Submission failed. Please try again." });
+      setErrors({
+        submit: e?.message || "Submission failed. Please try again.",
+      });
     } finally {
       setSubmitting(false);
     }
   };
 
   /* ================================================================ */
-  /*  SUBMITTED STATE                                                  */
-  /* ================================================================ */
-  if (isSubmitted) {
-    return (
-      <MainLayout>
-        <div className="min-h-screen bg-[#050a06] flex items-center justify-center p-6 relative overflow-hidden">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[28rem] h-[28rem] bg-green-900/20 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative w-full max-w-md bg-[#0d1f14] border border-green-800/40 rounded-[2rem] p-10 text-center shadow-2xl">
-            <div className="w-14 h-14 mx-auto mb-6 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-400">
-              <svg
-                width="28"
-                height="28"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
-                <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
-                <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
-              </svg>
-            </div>
-
-            <h2 className="text-2xl font-black text-green-400 mb-2 tracking-wide uppercase">
-              WL Spot Secured!
-            </h2>
-
-            <p className="text-green-600/80 font-mono text-sm mb-8 tracking-wider">
-              {submission!.wallet!.slice(0, 6)}...
-              {submission!.wallet!.slice(-4)}
-            </p>
-
-            <div className="w-full py-4 rounded-xl bg-green-700 text-white font-black tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-green-900/50">
-              <Check className="w-5 h-5" /> Submitted
-            </div>
-          </div>
-        </div>
-      </MainLayout>
-    );
-  }
-
-  /* ================================================================ */
-  /*  FORM STATE                                                       */
+  /*  RENDER                                                           */
   /* ================================================================ */
   return (
     <MainLayout>
@@ -553,8 +511,7 @@ export default function Whitelist() {
                                   "OPENING…"
                                 ) : (
                                   <>
-                                    GO{" "}
-                                    <ExternalLink className="w-3 h-3" />
+                                    GO <ExternalLink className="w-3 h-3" />
                                   </>
                                 )}
                               </button>
@@ -587,71 +544,109 @@ export default function Whitelist() {
                 </div>
               </div>
 
-              {/* Wallet Card */}
-              <div className="rounded-3xl border-2 border-slate-900 bg-slate-900 shadow-xl p-6 text-white">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center border border-white/10">
-                    <svg
-                      width="22"
-                      height="22"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
-                      <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
-                      <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="text-sm font-black">
-                      Submit Your EVM Wallet
+              {/* Wallet Card — transforms into success state on submit */}
+              {isSubmitted ? (
+                <div className="rounded-3xl border-2 border-green-500/30 bg-[#0d1f14] shadow-xl p-8 text-white">
+                  <div className="flex flex-col items-center text-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-400">
+                      <svg
+                        width="28"
+                        height="28"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+                        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+                        <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
+                      </svg>
                     </div>
-                    <div className="text-[11px] text-slate-400">
-                      Required for whitelist allocation
+                    <div>
+                      <h2 className="text-xl font-black text-green-400 tracking-wide uppercase mb-1">
+                        WL Spot Secured!
+                      </h2>
+                      <p className="text-green-600/80 font-mono text-sm tracking-wider">
+                        {submission!.wallet!.slice(0, 6)}...
+                        {submission!.wallet!.slice(-4)}
+                      </p>
+                    </div>
+                    <div className="w-full py-3 rounded-xl bg-green-700 text-white font-black tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-green-900/50">
+                      <Check className="w-5 h-5" /> Submitted
                     </div>
                   </div>
                 </div>
+              ) : (
+                <>
+                  {/* Wallet Input Card */}
+                  <div className="rounded-3xl border-2 border-slate-900 bg-slate-900 shadow-xl p-6 text-white">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center border border-white/10">
+                        <svg
+                          width="22"
+                          height="22"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+                          <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+                          <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div className="text-sm font-black">
+                          Submit Your EVM Wallet
+                        </div>
+                        <div className="text-[11px] text-slate-400">
+                          Required for whitelist allocation
+                        </div>
+                      </div>
+                    </div>
 
-                <input
-                  type="text"
-                  placeholder="0x…"
-                  value={inputs.wallet || ""}
-                  onChange={(e) => setField("wallet", e.target.value)}
-                  className={`w-full bg-black/30 border-2 text-white px-4 py-3 text-xs font-mono rounded-xl focus:outline-none transition-colors ${
-                    errors.wallet
-                      ? "border-red-500/50"
-                      : "border-white/10 focus:border-green-500/50"
-                  }`}
-                />
-                {errors.wallet && (
-                  <p className="text-[10px] text-red-400 mt-2 font-bold">
-                    {errors.wallet}
+                    <input
+                      type="text"
+                      placeholder="0x…"
+                      value={inputs.wallet || ""}
+                      onChange={(e) => setField("wallet", e.target.value)}
+                      className={`w-full bg-black/30 border-2 text-white px-4 py-3 text-xs font-mono rounded-xl focus:outline-none transition-colors ${
+                        errors.wallet
+                          ? "border-red-500/50"
+                          : "border-white/10 focus:border-green-500/50"
+                      }`}
+                    />
+                    {errors.wallet && (
+                      <p className="text-[10px] text-red-400 mt-2 font-bold">
+                        {errors.wallet}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Submit Button */}
+                  {errors.submit && (
+                    <p className="text-[11px] text-red-500 text-center font-bold">
+                      {errors.submit}
+                    </p>
+                  )}
+
+                  <button
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                    className="w-full py-4 rounded-2xl bg-[#1a1a1a] text-white font-black tracking-widest text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 active:scale-[0.98]"
+                  >
+                    {submitting ? "SUBMITTING…" : "SUBMIT APPLICATION"}
+                  </button>
+
+                  <p className="text-[10px] text-slate-400 text-center font-bold tracking-wide">
+                    Quote & comment links are manually reviewed.
                   </p>
-                )}
-              </div>
-
-              {/* Submit Button */}
-              {errors.submit && (
-                <p className="text-[11px] text-red-500 text-center font-bold">
-                  {errors.submit}
-                </p>
+                </>
               )}
-
-              <button
-                onClick={handleSubmit}
-                disabled={submitting}
-                className="w-full py-4 rounded-2xl bg-[#1a1a1a] text-white font-black tracking-widest text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 active:scale-[0.98]"
-              >
-                {submitting ? "SUBMITTING…" : "SUBMIT APPLICATION"}
-              </button>
-
-              <p className="text-[10px] text-slate-400 text-center font-bold tracking-wide">
-                Quote & comment links are manually reviewed.
-              </p>
             </div>
 
             {/* -------------------- RIGHT COLUMN (RING) -------------------- */}
