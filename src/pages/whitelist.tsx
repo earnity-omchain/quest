@@ -37,10 +37,8 @@ const RING_POSITIONS = [{ angle: -90 }, { angle: 0 }, { angle: 90 }, { angle: 18
 
 const EVM_REGEX = /^0x[a-fA-F0-9]{40}$/;
 
-// ── Global whitelist deadline — everyone sees the same clock ─────────────────
 const COUNTDOWN_END = new Date("2026-05-30T09:37:00");
 
-// ── Toggle this to lock/unlock the whitelist form ────────────────────────────
 const WHITELIST_CLOSED = true;
 
 type Submission = {
@@ -60,9 +58,6 @@ type Submission = {
   boost_submitted: boolean;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CountdownBanner – timer shown at the very top of the page
-// ─────────────────────────────────────────────────────────────────────────────
 function CountdownBanner() {
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0, expired: false });
 
@@ -92,7 +87,6 @@ function CountdownBanner() {
     <div className="w-full border-b border-orange-500/20 bg-black/60 backdrop-blur-sm py-3 px-6">
       <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-8">
         <div className="flex items-center gap-2">
-          {/* pulsing dot */}
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500" />
@@ -104,34 +98,22 @@ function CountdownBanner() {
           <span className="text-[10px] tracking-[0.4em] text-red-400 font-mono">WHITELIST CLOSED</span>
         ) : (
           <div className="flex items-center gap-1 font-mono">
-            {/* Hours */}
             <div className="flex flex-col items-center">
-              <span
-                className="text-2xl font-black tabular-nums leading-none"
-                style={{ color: "#f97316", textShadow: "0 0 18px rgba(249,115,22,0.6)" }}
-              >
+              <span className="text-2xl font-black tabular-nums leading-none" style={{ color: "#f97316", textShadow: "0 0 18px rgba(249,115,22,0.6)" }}>
                 {pad(timeLeft.hours)}
               </span>
               <span className="text-[7px] tracking-[0.3em] text-zinc-600 mt-0.5">HRS</span>
             </div>
             <span className="text-orange-500/60 text-xl font-black mb-3 mx-1">:</span>
-            {/* Minutes */}
             <div className="flex flex-col items-center">
-              <span
-                className="text-2xl font-black tabular-nums leading-none"
-                style={{ color: "#f97316", textShadow: "0 0 18px rgba(249,115,22,0.6)" }}
-              >
+              <span className="text-2xl font-black tabular-nums leading-none" style={{ color: "#f97316", textShadow: "0 0 18px rgba(249,115,22,0.6)" }}>
                 {pad(timeLeft.minutes)}
               </span>
               <span className="text-[7px] tracking-[0.3em] text-zinc-600 mt-0.5">MIN</span>
             </div>
             <span className="text-orange-500/60 text-xl font-black mb-3 mx-1">:</span>
-            {/* Seconds */}
             <div className="flex flex-col items-center">
-              <span
-                className="text-2xl font-black tabular-nums leading-none"
-                style={{ color: "#facc15", textShadow: "0 0 18px rgba(250,204,21,0.5)" }}
-              >
+              <span className="text-2xl font-black tabular-nums leading-none" style={{ color: "#facc15", textShadow: "0 0 18px rgba(250,204,21,0.5)" }}>
                 {pad(timeLeft.seconds)}
               </span>
               <span className="text-[7px] tracking-[0.3em] text-zinc-600 mt-0.5">SEC</span>
@@ -160,13 +142,9 @@ function CopyBtn({ text }: { text: string }) {
 }
 
 function EarnityProfileCard({
-  username,
-  avatarUrl,
   status,
   wallet,
 }: {
-  username: string;
-  avatarUrl: string | null;
   status: string;
   wallet: string | null;
 }) {
@@ -194,10 +172,7 @@ function EarnityProfileCard({
               <div className="text-[8px] text-white/30 tracking-wider">WHITELIST PORTAL</div>
             </div>
           </div>
-          <div
-            className={`px-2.5 py-1 rounded-full border text-[9px] font-bold tracking-wider ${cfg.bg} ${cfg.border}`}
-            style={{ color: cfg.color }}
-          >
+          <div className={`px-2.5 py-1 rounded-full border text-[9px] font-bold tracking-wider ${cfg.bg} ${cfg.border}`} style={{ color: cfg.color }}>
             {cfg.label}
           </div>
         </div>
@@ -206,22 +181,15 @@ function EarnityProfileCard({
           <div className="flex items-center gap-4 mb-5">
             <div className="relative">
               <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-white/10">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt={username} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-orange-500/20 to-purple-500/20 flex items-center justify-center">
-                    <span className="text-2xl font-bold text-white/60">{username.charAt(0).toUpperCase()}</span>
-                  </div>
-                )}
+                <div className="w-full h-full bg-gradient-to-br from-orange-500/20 to-purple-500/20 flex items-center justify-center">
+                  <span className="text-2xl font-bold text-white/60">T</span>
+                </div>
               </div>
-              <div
-                className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0a0a0f]"
-                style={{ background: cfg.color }}
-              />
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0a0a0f]" style={{ background: cfg.color }} />
             </div>
             <div>
-              <div className="text-lg font-bold text-white tracking-tight">{username}</div>
-              <div className="text-[10px] text-white/40 tracking-wider">Traveler</div>
+              <div className="text-lg font-bold text-white tracking-tight">Traveler</div>
+              <div className="text-[10px] text-white/40 tracking-wider">Guest</div>
             </div>
           </div>
 
@@ -234,12 +202,7 @@ function EarnityProfileCard({
                 </div>
                 <div className="flex items-center gap-1">
                   <CopyBtn text={wallet} />
-                  <a
-                    href={`https://etherscan.io/address/${wallet}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-white/40 hover:text-white"
-                  >
+                  <a href={`https://etherscan.io/address/${wallet}`} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-white/40 hover:text-white">
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                 </div>
@@ -253,42 +216,6 @@ function EarnityProfileCard({
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function DiscordSignIn() {
-  const [loading, setLoading] = useState(false);
-
-  const handleDiscordClick = async () => {
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "discord",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        scopes: "identify guilds",
-      },
-    });
-    if (error) {
-      console.error("Discord sign-in error:", error.message);
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="bg-zinc-950 border border-indigo-500/20 rounded-sm p-6 text-center">
-      <div className="text-2xl mb-3">⬡</div>
-      <div className="text-xs font-bold tracking-widest text-white mb-2">SIGN IN WITH DISCORD</div>
-      <p className="text-[10px] text-zinc-600 mb-4 leading-relaxed">
-        Connect your Discord to track your whitelist progress and secure your spot.
-      </p>
-      <button
-        onClick={handleDiscordClick}
-        disabled={loading}
-        className="w-full py-3 text-xs font-bold tracking-[0.3em] rounded-sm border border-indigo-500/50 text-indigo-400 hover:text-indigo-300 hover:border-indigo-400 bg-transparent cursor-pointer transition-all disabled:opacity-40"
-      >
-        {loading ? "CONNECTING..." : "CONNECT DISCORD"}
-      </button>
     </div>
   );
 }
@@ -350,24 +277,17 @@ function ElementalRing4({ completedTasks }: { completedTasks: string[] }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Phase closed banner — shown above the task list when WHITELIST_CLOSED = true
-// ─────────────────────────────────────────────────────────────────────────────
 function PhaseClosedBanner() {
   return (
     <div className="relative overflow-hidden rounded-sm border border-orange-500/25 bg-gradient-to-br from-orange-500/[0.06] via-black to-yellow-400/[0.04] px-5 py-5 mb-5">
-      {/* top accent line */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-500/60 to-transparent" />
-      {/* bottom accent line */}
       <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-500/20 to-transparent" />
 
       <div className="flex items-start gap-4">
-        {/* icon column */}
         <div className="flex-shrink-0 w-9 h-9 rounded-full border border-orange-500/30 bg-orange-500/10 flex items-center justify-center mt-0.5">
           <span className="text-base leading-none">🜂</span>
         </div>
 
-        {/* text column */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1.5">
             <span className="text-[10px] font-black tracking-[0.35em] text-orange-400">PHASE I CLOSED</span>
@@ -397,7 +317,6 @@ export default function Whitelist() {
   const [boostLinks, setBoostLinks] = useState(["", "", ""]);
   const [submittingBoost, setSubmittingBoost] = useState<number | null>(null);
   const [boostDone, setBoostDone] = useState([false, false, false]);
-  const [discordUser, setDiscordUser] = useState<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -409,12 +328,6 @@ export default function Whitelist() {
       }
       if (session) {
         setSessionId(session.user.id);
-        if (session.user.user_metadata?.avatar_url) {
-          setDiscordUser({
-            username: session.user.user_metadata.full_name || session.user.user_metadata.name,
-            avatar: session.user.user_metadata.avatar_url,
-          });
-        }
       }
     });
   }, []);
@@ -466,7 +379,6 @@ export default function Whitelist() {
   };
 
   const handleTask = async (task: typeof TASKS[0]) => {
-    // Block all task interactions when whitelist is closed
     if (WHITELIST_CLOSED) return;
     if (!sessionId || !isUnlocked(TASKS.indexOf(task)) || done(task.id)) return;
     await ensureSubmission();
@@ -540,7 +452,6 @@ export default function Whitelist() {
 
   return (
     <MainLayout>
-      {/* ── Countdown banner ───────────────────────────────────────────────── */}
       <CountdownBanner />
 
       {celebrating && (
@@ -562,15 +473,12 @@ export default function Whitelist() {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8 items-start">
           <div className="flex flex-col gap-6">
-            {!discordUser && <DiscordSignIn />}
-
             <div>
               <div className="flex justify-between items-center mb-4 pb-3 border-b border-white/5">
                 <span className="text-[10px] tracking-[0.3em] text-zinc-600">ELEMENTAL TASKS</span>
                 <span className="text-[10px] tracking-[0.2em] text-zinc-600">{completedCount}/4 COMPLETE</span>
               </div>
 
-              {/* ── Phase closed banner ──────────────────────────────────────── */}
               {WHITELIST_CLOSED && <PhaseClosedBanner />}
 
               <div className="flex flex-col gap-3">
@@ -578,7 +486,6 @@ export default function Whitelist() {
                   const isDone = done(task.id);
                   const unlocked = isUnlocked(index);
                   const isPending = pendingTask === task.id;
-                  // Never show proof input when whitelist is closed
                   const showProof = !WHITELIST_CLOSED && unlocked && !isDone && task.needsProof;
 
                   return (
@@ -588,7 +495,6 @@ export default function Whitelist() {
                       style={{
                         borderColor: isDone ? task.color + "44" : "#1e1e1e",
                         background: isDone ? task.color + "08" : "#080808",
-                        // Dim tasks slightly when closed and not done
                         opacity: WHITELIST_CLOSED && !isDone ? 0.6 : 1,
                       }}
                     >
@@ -614,14 +520,11 @@ export default function Whitelist() {
                         </div>
                         <div className="flex-shrink-0">
                           {isDone ? (
-                            <span
-                              className="text-[10px] font-bold tracking-[0.2em] border px-3 py-1.5 rounded-sm"
-                              style={{ color: task.color, borderColor: task.color + "44" }}
-                            >
+                            <span className="text-[10px] font-bold tracking-[0.2em] border px-3 py-1.5 rounded-sm"
+                              style={{ color: task.color, borderColor: task.color + "44" }}>
                               ✓ DONE
                             </span>
                           ) : WHITELIST_CLOSED ? (
-                            // ── Closed state badge ───────────────────────────
                             <span className="text-[10px] font-bold tracking-[0.2em] border px-3 py-1.5 rounded-sm text-zinc-700 border-zinc-800/60">
                               CLOSED
                             </span>
@@ -640,7 +543,6 @@ export default function Whitelist() {
                         </div>
                       </div>
 
-                      {/* Proof input — hidden when closed */}
                       {showProof && (
                         <div className="px-5 pb-4 border-t border-white/5 pt-3">
                           <div className="text-[9px] tracking-[0.3em] text-zinc-700 mb-2">PASTE YOUR {task.id.toUpperCase()} LINK</div>
@@ -669,7 +571,6 @@ export default function Whitelist() {
               </div>
             </div>
 
-            {/* Register Wallet */}
             {isWL && (
               <div className="bg-zinc-950 border border-green-400/20 rounded-sm p-5">
                 <div className="text-[10px] tracking-[0.3em] text-green-400 mb-1">REGISTER WALLET</div>
@@ -704,17 +605,13 @@ export default function Whitelist() {
               </div>
             )}
 
-            {/* Profile Card */}
             {walletSubmitted && submission && (
               <EarnityProfileCard
-                username={discordUser?.username || "Traveler"}
-                avatarUrl={discordUser?.avatar || null}
                 status={submission.status}
                 wallet={submission.wallet}
               />
             )}
 
-            {/* Upgrade to GTD */}
             {walletSubmitted && (
               <div className="bg-zinc-950 border border-orange-500/20 rounded-sm overflow-hidden">
                 <a href="https://earnity.fun" target="_blank" rel="noreferrer" className="no-underline block">
@@ -732,7 +629,6 @@ export default function Whitelist() {
               </div>
             )}
 
-            {/* Individual Contributions */}
             <div className="bg-zinc-950 border border-orange-500/15 rounded-sm p-5">
               <div className="text-[10px] tracking-[0.3em] text-orange-400/80 mb-1">GET APPROVED FASTER?</div>
               <div className="text-[10px] text-zinc-600 mb-5 leading-relaxed">
@@ -771,13 +667,11 @@ export default function Whitelist() {
             </div>
           </div>
 
-          {/* Right sidebar */}
           <div className="flex flex-col gap-4 lg:sticky lg:top-24">
             <div className="bg-zinc-950 border border-white/5 rounded-sm p-6 flex flex-col items-center">
               <ElementalRing4 completedTasks={completedTasks} />
               <div className="w-full bg-zinc-900 rounded-full h-1 mt-5 mb-2">
-                <div
-                  className="h-1 rounded-full transition-all duration-700"
+                <div className="h-1 rounded-full transition-all duration-700"
                   style={{ width: `${(completedCount / 4) * 100}%`, background: "linear-gradient(90deg, #f97316, #facc15)" }}
                 />
               </div>
