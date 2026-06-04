@@ -73,7 +73,7 @@ const EVM_REGEX = /^0x[a-fA-F0-9]{40}$/;
 /* ------------------------------------------------------------------ */
 
 function getClientId(): string {
-  const key = "wl_client_id";
+  const key = "wl_session_id";
   let id = localStorage.getItem(key);
   if (!id) {
     id = crypto.randomUUID();
@@ -197,10 +197,10 @@ function ElementalRing4({ completedTasks }: { completedTasks: string[] }) {
 
 export default function Whitelist() {
   const clientId = useRef<string>(getClientId());
-  const [submission, setSubmission] = useState<Submission | null>(null);
-  const [inputs, setInputs] = useState<Record<string, string>>({});
+  const [submission, setSubmission] = useState<<Submission | null>(null);
+  const [inputs, setInputs] = useState<<Record<string, string>>({});
   const [pendingTask, setPendingTask] = useState<string | null>(null);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -229,7 +229,7 @@ export default function Whitelist() {
   /* --- fetch existing submission ----------------------------------- */
   const fetchSubmission = async () => {
     const { data, error } = await supabase
-      .from("wl_submissions_quest")
+      .from("whitelist_applications")
       .select("*")
       .eq("session_id", clientId.current)
       .maybeSingle();
@@ -254,7 +254,7 @@ export default function Whitelist() {
   /* --- ensure row exists ------------------------------------------- */
   const ensureSubmission = async () => {
     const { data, error: selectErr } = await supabase
-      .from("wl_submissions_quest")
+      .from("whitelist_applications")
       .select("id")
       .eq("session_id", clientId.current)
       .maybeSingle();
@@ -265,7 +265,7 @@ export default function Whitelist() {
 
     if (!data) {
       const { error: insertErr } = await supabase
-        .from("wl_submissions_quest")
+        .from("whitelist_applications")
         .insert({ session_id: clientId.current, status: "in_progress" });
 
       if (insertErr) {
@@ -293,15 +293,13 @@ export default function Whitelist() {
   const handleGoTask = async (task: (typeof TASKS)[0]) => {
     if (done(task.id)) return;
 
-    // Always open the link immediately
     window.open(task.url!, "_blank");
     setPendingTask(task.id);
 
-    // Fire-and-forget DB update (don't block UI if it fails)
     try {
       await ensureSubmission();
       const { error } = await supabase
-        .from("wl_submissions_quest")
+        .from("whitelist_applications")
         .update({
           [`${task.id}_done`]: true,
           updated_at: new Date().toISOString(),
@@ -335,7 +333,6 @@ export default function Whitelist() {
   const handleSubmit = async () => {
     const errs: Record<string, string> = {};
 
-    /* Luxio-style validation: GO tasks must be clicked, inputs must be filled */
     if (!done("follow")) errs.follow = "Required — complete this task";
     if (!done("like")) errs.like = "Required — complete this task";
 
@@ -369,7 +366,7 @@ export default function Whitelist() {
       };
 
       const { error } = await supabase
-        .from("wl_submissions_quest")
+        .from("whitelist_applications")
         .update(payload)
         .eq("session_id", clientId.current);
 
