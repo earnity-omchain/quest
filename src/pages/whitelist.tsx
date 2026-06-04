@@ -41,16 +41,20 @@ const TASKS = [
     img: ELEMENTAL_IMAGES.nature,
     label: "Quote the Post",
     desc: "Quote our post with your thoughts",
+    url: "https://x.com/earnity_/status/2059543689223885305?s=20",
+    goButton: true,
     inputPlaceholder: "Paste your quote tweet link",
   },
   {
-    id: "comment",               // DB column stays 'comment' — UI says "Tag 2 Friends"
+    id: "comment",
     element: "LIGHTNING",
     color: "#eab308",
     bg: "#fefce8",
     img: ELEMENTAL_IMAGES.lightning,
-    label: "Tag 2 Friends",
-    desc: "Tag 2 friends in our post",
+    label: "Comment & Tag 2 Friends",
+    desc: "Comment & tag 2 friends in our post",
+    url: "https://x.com/earnity_/status/2059543689223885305?s=20",
+    goButton: true,
     inputPlaceholder: "Paste your comment link",
   },
 ];
@@ -193,14 +197,14 @@ function ElementalRing4({ completedTasks }: { completedTasks: string[] }) {
 
 export default function Whitelist() {
   const clientId = useRef<string>(getClientId());
-  const [submission, setSubmission] = useState<Submission | null>(null);
-  const [inputs, setInputs] = useState<Record<string, string>>({});
+  const [submission, setSubmission] = useState<<Submission | null>(null);
+  const [inputs, setInputs] = useState<<Record<string, string>>({});
   const [pendingTask, setPendingTask] = useState<string | null>(null);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
 
-  /* --- load draft inputs from localStorage -------------------------- */
+  /* --- load draft inputs ------------------------------------------ */
   useEffect(() => {
     const draft = localStorage.getItem(`wl_draft_${clientId.current}`);
     if (draft) {
@@ -229,7 +233,6 @@ export default function Whitelist() {
 
     if (data) {
       setSubmission(data);
-      // If already fully submitted, overwrite inputs with saved data
       if (data.wallet) {
         setInputs({
           quote: data.quote_url || "",
@@ -266,7 +269,7 @@ export default function Whitelist() {
   const completedCount = completedTasks.length;
   const isSubmitted = !!submission?.wallet;
 
-  /* --- GO-button tasks (follow / like) ----------------------------- */
+  /* --- GO-button tasks --------------------------------------------- */
   const handleGoTask = async (task: (typeof TASKS)[0]) => {
     if (done(task.id)) return;
     await ensureSubmission();
@@ -308,8 +311,11 @@ export default function Whitelist() {
 
     if (!done("follow")) errs.follow = "Required — complete this task";
     if (!done("like")) errs.like = "Required — complete this task";
+    if (!done("quote")) errs.quote = "Click GO and paste your quote tweet link";
+    if (!done("comment")) errs.comment = "Click GO and paste your comment link";
+
     if (!inputs.quote?.trim()) errs.quote = "Paste your quote tweet link";
-    if (!inputs.comment?.trim()) errs.comment = "Paste your tag/comment link";
+    if (!inputs.comment?.trim()) errs.comment = "Paste your comment link";
 
     const wallet = inputs.wallet?.trim();
     if (!wallet) {
@@ -355,17 +361,15 @@ export default function Whitelist() {
   };
 
   /* ================================================================ */
-  /*  SUBMITTED STATE  —  matches your image exactly                   */
+  /*  SUBMITTED STATE                                                  */
   /* ================================================================ */
   if (isSubmitted) {
     return (
       <MainLayout>
         <div className="min-h-screen bg-[#050a06] flex items-center justify-center p-6 relative overflow-hidden">
-          {/* ambient glow */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[28rem] h-[28rem] bg-green-900/20 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative w-full max-w-md bg-[#0d1f14] border border-green-800/40 rounded-[2rem] p-10 text-center shadow-2xl">
-            {/* wallet icon */}
             <div className="w-14 h-14 mx-auto mb-6 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-400">
               <svg
                 width="28"
@@ -407,7 +411,6 @@ export default function Whitelist() {
   return (
     <MainLayout>
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-sky-50 relative overflow-hidden">
-        {/* background blobs */}
         <div className="absolute top-20 left-10 w-64 h-64 bg-orange-300 rounded-full blur-3xl opacity-30 pointer-events-none" />
         <div className="absolute bottom-40 right-10 w-72 h-72 bg-pink-300 rounded-full blur-3xl opacity-30 pointer-events-none" />
         <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-sky-300 rounded-full blur-3xl opacity-20 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
@@ -455,14 +458,8 @@ export default function Whitelist() {
                         }}
                       >
                         <div className="p-5">
-                          <div
-                            className={`flex ${
-                              task.goButton
-                                ? "flex-row items-center"
-                                : "flex-col"
-                            } gap-4`}
-                          >
-                            {/* icon */}
+                          {/* Top row: icon + text + GO button */}
+                          <div className="flex items-center gap-4">
                             <div
                               className="w-12 h-12 rounded-full flex items-center justify-center border-2 border-white shadow-md flex-shrink-0 transition-all duration-300"
                               style={{
@@ -484,63 +481,55 @@ export default function Whitelist() {
                               )}
                             </div>
 
-                            {/* text + optional GO button */}
-                            <div
-                              className={
-                                task.goButton
-                                  ? "flex-1 flex items-center justify-between min-w-0"
-                                  : "flex-1 w-full min-w-0"
-                              }
-                            >
-                              <div className="min-w-0">
-                                <div
-                                  className={`text-sm font-black mb-0.5 ${
-                                    isDone
-                                      ? "text-slate-400 line-through"
-                                      : "text-slate-800"
-                                  }`}
-                                >
-                                  {task.label}
-                                </div>
-                                <div className="text-[11px] text-slate-400">
-                                  {task.desc}
-                                </div>
+                            <div className="flex-1 min-w-0">
+                              <div
+                                className={`text-sm font-black mb-0.5 ${
+                                  isDone
+                                    ? "text-slate-400 line-through"
+                                    : "text-slate-800"
+                                }`}
+                              >
+                                {task.label}
                               </div>
-
-                              {task.goButton && (
-                                <button
-                                  onClick={() => handleGoTask(task)}
-                                  disabled={isDone || !!isPending}
-                                  className="ml-4 text-[10px] font-black tracking-widest px-5 py-2.5 rounded-full cursor-pointer transition-all shadow-md disabled:opacity-50 disabled:cursor-default whitespace-nowrap flex items-center gap-1"
-                                  style={{
-                                    background: isDone
-                                      ? "transparent"
-                                      : "#1a1a1a",
-                                    color: isDone ? task.color : "#fff",
-                                    border: isDone
-                                      ? `2px solid ${task.color}30`
-                                      : "none",
-                                  }}
-                                >
-                                  {isDone ? (
-                                    <>
-                                      <Check className="w-3 h-3" /> DONE
-                                    </>
-                                  ) : isPending ? (
-                                    "OPENING…"
-                                  ) : (
-                                    <>
-                                      GO <ExternalLink className="w-3 h-3" />
-                                    </>
-                                  )}
-                                </button>
-                              )}
+                              <div className="text-[11px] text-slate-400">
+                                {task.desc}
+                              </div>
                             </div>
+
+                            {task.goButton && (
+                              <button
+                                onClick={() => handleGoTask(task)}
+                                disabled={isDone || !!isPending}
+                                className="text-[10px] font-black tracking-widest px-5 py-2.5 rounded-full cursor-pointer transition-all shadow-md disabled:opacity-50 disabled:cursor-default whitespace-nowrap flex items-center gap-1"
+                                style={{
+                                  background: isDone
+                                    ? "transparent"
+                                    : "#1a1a1a",
+                                  color: isDone ? task.color : "#fff",
+                                  border: isDone
+                                    ? `2px solid ${task.color}30`
+                                    : "none",
+                                }}
+                              >
+                                {isDone ? (
+                                  <>
+                                    <Check className="w-3 h-3" /> DONE
+                                  </>
+                                ) : isPending ? (
+                                  "OPENING…"
+                                ) : (
+                                  <>
+                                    GO{" "}
+                                    <ExternalLink className="w-3 h-3" />
+                                  </>
+                                )}
+                              </button>
+                            )}
                           </div>
 
-                          {/* always-visible inputs (quote / tag) */}
-                          {!task.goButton && (
-                            <div className="mt-3">
+                          {/* Input field (quote / comment / wallet) */}
+                          {task.inputPlaceholder && !task.isWallet && (
+                            <div className="mt-4">
                               <input
                                 type="text"
                                 placeholder={task.inputPlaceholder}
@@ -627,7 +616,7 @@ export default function Whitelist() {
               </button>
 
               <p className="text-[10px] text-slate-400 text-center font-bold tracking-wide">
-                Quote & tag links are manually reviewed.
+                Quote & comment links are manually reviewed.
               </p>
             </div>
 
@@ -641,8 +630,7 @@ export default function Whitelist() {
                     className="h-2 rounded-full transition-all duration-700"
                     style={{
                       width: `${(completedCount / 4) * 100}%`,
-                      background:
-                        "linear-gradient(90deg, #fb923c, #facc15)",
+                      background: "linear-gradient(90deg, #fb923c, #facc15)",
                     }}
                   />
                 </div>
