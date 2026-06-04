@@ -385,7 +385,7 @@ export default function Whitelist() {
       toast({
         title: "Application Received",
         description:
-          "We'll review your submission and whitelist approved Outworlders.",
+          "We'll review your submission and whitelist approved traveler.",
       });
     } catch (e: any) {
       console.error("handleSubmit catch:", e);
