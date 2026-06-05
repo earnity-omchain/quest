@@ -30,7 +30,7 @@ const TASKS = [
     img: ELEMENTAL_IMAGES.water,
     label: "Like the Post",
     desc: "Like our announcement post",
-    url: "https://x.com/earnity_/status/2062583880369004561?s=20",
+    url: "https://x.com/earnity_/status/2062922344193007668?s=20",
     goButton: true,
   },
   {
