@@ -69,18 +69,8 @@ const RING_POSITIONS = [
 const EVM_REGEX = /^0x[a-fA-F0-9]{40}$/;
 
 /* ------------------------------------------------------------------ */
-/*  HELPERS                                                            */
+/*  TYPES                                                              */
 /* ------------------------------------------------------------------ */
-
-function getClientId(): string {
-  const key = "wl_session_id";
-  let id = localStorage.getItem(key);
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem(key, id);
-  }
-  return id;
-}
 
 type Submission = {
   id?: string;
@@ -196,7 +186,10 @@ function ElementalRing4({ completedTasks }: { completedTasks: string[] }) {
 /* ------------------------------------------------------------------ */
 
 export default function Whitelist() {
-  const clientId = useRef<string>(getClientId());
+  // authReady gates all DB calls until we have a confirmed anon session
+  const [authReady, setAuthReady] = useState(false);
+  const clientId = useRef<string | null>(null);
+
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [pendingTask, setPendingTask] = useState<string | null>(null);
@@ -204,8 +197,46 @@ export default function Whitelist() {
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
 
-  /* --- load draft inputs ------------------------------------------ */
+  /* ----------------------------------------------------------------
+     1. Sign in anonymously on mount — silent, no UI, unforgeable ID
+     ---------------------------------------------------------------- */
   useEffect(() => {
+    const initAuth = async () => {
+      // Re-use an existing session if the browser already has one
+      const { data: sessionData } = await supabase.auth.getSession();
+
+      if (sessionData?.session?.user) {
+        clientId.current = sessionData.session.user.id;
+        setAuthReady(true);
+        return;
+      }
+
+      // Otherwise create a new anonymous session
+      const { data, error } = await supabase.auth.signInAnonymously();
+
+      if (error) {
+        console.error("Anonymous auth error:", error);
+        toast({
+          title: "Connection error",
+          description: "Could not initialise session. Please refresh.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      clientId.current = data.user!.id;
+      setAuthReady(true);
+    };
+
+    initAuth();
+  }, []);
+
+  /* ----------------------------------------------------------------
+     2. Load draft inputs from localStorage (keyed to anon user id)
+     ---------------------------------------------------------------- */
+  useEffect(() => {
+    if (!authReady || !clientId.current) return;
+
     const draft = localStorage.getItem(`wl_draft_${clientId.current}`);
     if (draft) {
       try {
@@ -214,20 +245,29 @@ export default function Whitelist() {
         /* noop */
       }
     }
+
     fetchSubmission();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authReady]);
 
-  /* --- persist draft inputs ---------------------------------------- */
+  /* ----------------------------------------------------------------
+     3. Persist draft inputs
+     ---------------------------------------------------------------- */
   useEffect(() => {
+    if (!clientId.current) return;
     localStorage.setItem(
       `wl_draft_${clientId.current}`,
       JSON.stringify(inputs)
     );
   }, [inputs]);
 
-  /* --- fetch existing submission ----------------------------------- */
+  /* ----------------------------------------------------------------
+     4. Fetch existing submission
+        RLS ensures this only ever returns the current user's row.
+     ---------------------------------------------------------------- */
   const fetchSubmission = async () => {
+    if (!clientId.current) return;
+
     const { data, error } = await supabase
       .from("whitelist_applications")
       .select("*")
@@ -251,8 +291,14 @@ export default function Whitelist() {
     }
   };
 
-  /* --- ensure row exists ------------------------------------------- */
+  /* ----------------------------------------------------------------
+     5. Ensure the user's row exists (insert if not)
+        RLS WITH CHECK (session_id = auth.uid()::text) prevents
+        inserting a row on behalf of anyone else.
+     ---------------------------------------------------------------- */
   const ensureSubmission = async () => {
+    if (!clientId.current) return;
+
     const { data, error: selectErr } = await supabase
       .from("whitelist_applications")
       .select("id")
@@ -279,7 +325,9 @@ export default function Whitelist() {
     }
   };
 
-  /* --- helpers ----------------------------------------------------- */
+  /* ----------------------------------------------------------------
+     Helpers
+     ---------------------------------------------------------------- */
   const done = (id: string) => {
     if (!submission) return false;
     return submission[`${id}_done` as keyof Submission] as boolean;
@@ -289,9 +337,14 @@ export default function Whitelist() {
   const completedCount = completedTasks.length;
   const isSubmitted = !!submission?.wallet;
 
-  /* --- GO-button tasks --------------------------------------------- */
+  /* ----------------------------------------------------------------
+     6. GO-button handler
+        UPDATE is protected by RLS USING (session_id = auth.uid()::text)
+        so the .eq("session_id", ...) filter is now enforced server-side
+        too — a spoofed session_id simply won't match auth.uid().
+     ---------------------------------------------------------------- */
   const handleGoTask = async (task: (typeof TASKS)[0]) => {
-    if (done(task.id)) return;
+    if (done(task.id) || !authReady) return;
 
     window.open(task.url!, "_blank");
     setPendingTask(task.id);
@@ -304,7 +357,7 @@ export default function Whitelist() {
           [`${task.id}_done`]: true,
           updated_at: new Date().toISOString(),
         })
-        .eq("session_id", clientId.current);
+        .eq("session_id", clientId.current!);
 
       if (error) console.error("handleGoTask update error:", error);
       await fetchSubmission();
@@ -319,7 +372,9 @@ export default function Whitelist() {
     }
   };
 
-  /* --- input change ------------------------------------------------ */
+  /* ----------------------------------------------------------------
+     Input change
+     ---------------------------------------------------------------- */
   const setField = (key: string, value: string) => {
     setInputs((p) => ({ ...p, [key]: value }));
     setErrors((p) => {
@@ -329,8 +384,12 @@ export default function Whitelist() {
     });
   };
 
-  /* --- final submit ------------------------------------------------ */
+  /* ----------------------------------------------------------------
+     7. Final submit
+     ---------------------------------------------------------------- */
   const handleSubmit = async () => {
+    if (!authReady) return;
+
     const errs: Record<string, string> = {};
 
     if (!done("follow")) errs.follow = "Required — complete this task";
@@ -368,7 +427,7 @@ export default function Whitelist() {
       const { error } = await supabase
         .from("whitelist_applications")
         .update(payload)
-        .eq("session_id", clientId.current);
+        .eq("session_id", clientId.current!);
 
       if (error) {
         console.error("Supabase submit error:", error);
@@ -397,9 +456,23 @@ export default function Whitelist() {
     }
   };
 
-  /* ================================================================ */
-  /*  RENDER                                                           */
-  /* ================================================================ */
+  /* ================================================================
+     RENDER
+     ================================================================ */
+
+  // Show a minimal loading state while anon auth initialises
+  if (!authReady) {
+    return (
+      <MainLayout>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-pink-50 to-sky-50">
+          <div className="text-slate-400 text-sm font-black tracking-widest animate-pulse">
+            LOADING…
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-sky-50 relative overflow-hidden">
@@ -486,6 +559,11 @@ export default function Whitelist() {
                               <div className="text-[11px] text-slate-400">
                                 {task.desc}
                               </div>
+                              {errors[task.id] && (
+                                <p className="text-[10px] text-red-500 mt-1 font-bold">
+                                  {errors[task.id]}
+                                </p>
+                              )}
                             </div>
 
                             {task.goButton && (
